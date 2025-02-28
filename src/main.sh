@@ -22,7 +22,7 @@ case "$ACTION" in
         python3 "$FSORT_DIR/src/core.py" --action sort --config "$CONFIG_PATH"
         ;;
     "version")
-        cat "$FSORT_DIR/version"
+        printf "%s\n" "$(cat "$FSORT_DIR/version")"
         ;;
     *)
         echo "[ERROR] Invalid command: $ACTION"
