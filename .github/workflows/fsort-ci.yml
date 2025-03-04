@@ -76,13 +76,13 @@ jobs:
       - name: Prepare Debian package structure
         run: |
           # Create directories for Debian package structure
-          mkdir -p "fsort_${VERSION}/DEBIAN"
-          mkdir -p "fsort_${VERSION}/usr/local/bin"
+          mkdir -p "fsort_$VERSION/DEBIAN"
+          mkdir -p "fsort_$VERSION/usr/local/bin"
 
           # Correcting 'Maintainer' and adding other necessary info to the control file
-          cat <<EOF > "fsort_${VERSION}/DEBIAN/control"
+          cat <<EOF > "fsort_$VERSION/DEBIAN/control"
           Package: fsort
-          Version: ${VERSION}
+          Version: $VERSION
           Architecture: all
           Maintainer: Brandon <brandon@example.com>
           Description: Automated File Organizer
@@ -91,47 +91,47 @@ jobs:
           EOF
 
           # Post-installation script
-          cat <<EOF > "fsort_${VERSION}/DEBIAN/postinst"
+          cat <<EOF > "fsort_$VERSION/DEBIAN/postinst"
           #!/bin/bash
           chmod +x /usr/local/bin/fsort
           chmod +x /usr/local/bin/fsort-uninstall
           echo 'fsort installed successfully!'
           EOF
-          chmod 0755 "fsort_${VERSION}/DEBIAN/postinst"
+          chmod 0755 "fsort_$VERSION/DEBIAN/postinst"
 
           # Pre-removal script
-          cat <<EOF > "fsort_${VERSION}/DEBIAN/prerm"
+          cat <<EOF > "fsort_$VERSION/DEBIAN/prerm"
           #!/bin/bash
           echo '[INFO] Running uninstall...'
           fsort-uninstall || { echo "[ERROR] Uninstall failed"; exit 1; }
           echo '[SUCCESS] fsort removed successfully.'
           EOF
-          chmod 0755 "fsort_${VERSION}/DEBIAN/prerm"
+          chmod 0755 "fsort_$VERSION/DEBIAN/prerm"
 
           # Copy necessary files to the package directory
-          cp src/main.sh "fsort_${VERSION}/usr/local/bin/fsort"
-          cp install.sh "fsort_${VERSION}/usr/local/bin/fsort-install"  # Assuming you want install script available
+          cp src/main.sh "fsort_$VERSION/usr/local/bin/fsort"
+          cp install.sh "fsort_$VERSION/usr/local/bin/fsort-install"  # Assuming you want install script available
 
       - name: Build Debian package
-        run: dpkg-deb --build "fsort_${VERSION}"
+        run: dpkg-deb --build "fsort_$VERSION"
 
       - name: Create tar.gz package
-        run: tar -czvf "fsort-${VERSION}.tar.gz" src/ install.sh version
+        run: tar -czvf "fsort-$VERSION.tar.gz" src/ install.sh version
 
       - name: Debug file listing
         run: |
           ls -lh
-          ls -lh fsort_${VERSION}.deb
-          ls -lh fsort-${VERSION}.tar.gz
+          ls -lh fsort_$VERSION.deb
+          ls -lh fsort-$VERSION.tar.gz
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            fsort-${VERSION}.tar.gz
-            fsort_${VERSION}.deb
-          tag_name: "v${VERSION}"
-          name: "fsort v${VERSION}"
-          body: "Version ${VERSION} of fsort - Automated File Organizer."
+            fsort-$VERSION.tar.gz
+            fsort_$VERSION.deb
+          tag_name: "v$VERSION"
+          name: "fsort v$VERSION"
+          body: "Version $VERSION of fsort - Automated File Organizer."
           draft: false
           prerelease: false
