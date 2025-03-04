@@ -105,7 +105,7 @@ jobs:
           chmod 0755 "fsort_${VERSION}/DEBIAN/prerm"
 
           cp src/main.sh "fsort_${VERSION}/usr/local/bin/fsort"
-          cp uninstall.sh "fsort_${VERSION}/usr/local/bin/fsort-uninstall"
+          
 
       - name: Build Debian package
         run: dpkg-deb --build "fsort_${VERSION}"
