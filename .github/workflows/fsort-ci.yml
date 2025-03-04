@@ -110,7 +110,11 @@ jobs:
           cat <<EOF > "fsort_${{ env.VERSION }}/DEBIAN/prerm"
           #!/bin/bash
           echo '[INFO] Running uninstall...'
-          /usr/local/bin/fsort-uninstall || echo "[WARNING] Uninstall script failed."
+          if [ -x /usr/local/bin/fsort-uninstall ]; then
+            /usr/local/bin/fsort-uninstall || echo "[WARNING] Uninstall script failed."
+          else
+            echo "[WARNING] Uninstall script not found."
+          fi
           echo '[SUCCESS] fsort removed successfully.'
           EOF
           chmod 0755 "fsort_${{ env.VERSION }}/DEBIAN/prerm"
@@ -128,6 +132,9 @@ jobs:
           # Copier les scripts principaux
           cp main.sh "fsort_${{ env.VERSION }}/usr/local/bin/fsort"
           cp install.sh "fsort_${{ env.VERSION }}/usr/share/fsort/install.sh"
+
+          # Vérifier la présence du script fsort-uninstall
+          [ -f "fsort_${{ env.VERSION }}/usr/local/bin/fsort-uninstall" ] || { echo "::error::Missing fsort-uninstall script"; exit 1; }
 
       - name: Build Debian package
         run: dpkg-deb --build "fsort_${{ env.VERSION }}"
