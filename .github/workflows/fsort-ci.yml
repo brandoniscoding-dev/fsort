@@ -5,7 +5,6 @@ on:
     branches:
       - master
       - dev
-
   pull_request:
     branches:
       - master
@@ -18,7 +17,6 @@ jobs:
   build-and-test:
     name: Install and Test fsort
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,7 +59,6 @@ jobs:
     needs: build-and-test
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -70,19 +67,17 @@ jobs:
         id: get_version
         run: |
           VERSION=$(cat version | tr -d '\n')
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Read version: ${VERSION}"
 
       - name: Prepare Debian package structure
         run: |
-          # Create directories for Debian package structure
-          mkdir -p "fsort_$VERSION/DEBIAN"
-          mkdir -p "fsort_$VERSION/usr/local/bin"
+          mkdir -p "fsort_${{ steps.get_version.outputs.VERSION }}/DEBIAN"
+          mkdir -p "fsort_${{ steps.get_version.outputs.VERSION }}/usr/local/bin"
 
-          # Correcting 'Maintainer' and adding other necessary info to the control file
-          cat <<EOF > "fsort_$VERSION/DEBIAN/control"
+          cat <<EOF > "fsort_${{ steps.get_version.outputs.VERSION }}/DEBIAN/control"
           Package: fsort
-          Version: $VERSION
+          Version: ${{ steps.get_version.outputs.VERSION }}
           Architecture: all
           Maintainer: Brandon <brandon@example.com>
           Description: Automated File Organizer
@@ -90,48 +85,45 @@ jobs:
           Priority: optional
           EOF
 
-          # Post-installation script
-          cat <<EOF > "fsort_$VERSION/DEBIAN/postinst"
+          cat <<EOF > "fsort_${{ steps.get_version.outputs.VERSION }}/DEBIAN/postinst"
           #!/bin/bash
           chmod +x /usr/local/bin/fsort
           chmod +x /usr/local/bin/fsort-uninstall
           echo 'fsort installed successfully!'
           EOF
-          chmod 0755 "fsort_$VERSION/DEBIAN/postinst"
+          chmod 0755 "fsort_${{ steps.get_version.outputs.VERSION }}/DEBIAN/postinst"
 
-          # Pre-removal script
-          cat <<EOF > "fsort_$VERSION/DEBIAN/prerm"
+          cat <<EOF > "fsort_${{ steps.get_version.outputs.VERSION }}/DEBIAN/prerm"
           #!/bin/bash
           echo '[INFO] Running uninstall...'
           fsort-uninstall || { echo "[ERROR] Uninstall failed"; exit 1; }
           echo '[SUCCESS] fsort removed successfully.'
           EOF
-          chmod 0755 "fsort_$VERSION/DEBIAN/prerm"
+          chmod 0755 "fsort_${{ steps.get_version.outputs.VERSION }}/DEBIAN/prerm"
 
-          # Copy necessary files to the package directory
-          cp src/main.sh "fsort_$VERSION/usr/local/bin/fsort"
-          cp install.sh "fsort_$VERSION/usr/local/bin/fsort-install"  # Assuming you want install script available
+          cp src/main.sh "fsort_${{ steps.get_version.outputs.VERSION }}/usr/local/bin/fsort"
+          cp install.sh "fsort_${{ steps.get_version.outputs.VERSION }}/usr/local/bin/fsort-install"
 
       - name: Build Debian package
-        run: dpkg-deb --build "fsort_$VERSION"
+        run: dpkg-deb --build "fsort_${{ steps.get_version.outputs.VERSION }}"
 
       - name: Create tar.gz package
-        run: tar -czvf "fsort-$VERSION.tar.gz" src/ install.sh version
+        run: tar -czvf "fsort-${{ steps.get_version.outputs.VERSION }}.tar.gz" src/ install.sh version
 
-      - name: Debug file listing
+      - name: Verify artifacts
         run: |
           ls -lh
-          ls -lh fsort_$VERSION.deb
-          ls -lh fsort-$VERSION.tar.gz
+          [ -f "fsort_${{ steps.get_version.outputs.VERSION }}.deb" ] || { echo "::error::Missing .deb file"; exit 1; }
+          [ -f "fsort-${{ steps.get_version.outputs.VERSION }}.tar.gz" ] || { echo "::error::Missing .tar.gz file"; exit 1; }
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            fsort-$VERSION.tar.gz
-            fsort_$VERSION.deb
-          tag_name: "v$VERSION"
-          name: "fsort v$VERSION"
-          body: "Version $VERSION of fsort - Automated File Organizer."
+            fsort-${{ steps.get_version.outputs.VERSION }}.tar.gz
+            fsort_${{ steps.get_version.outputs.VERSION }}.deb
+          tag_name: "v${{ steps.get_version.outputs.VERSION }}"
+          name: "fsort v${{ steps.get_version.outputs.VERSION }}"
+          body: "Version ${{ steps.get_version.outputs.VERSION }} - $(date +'%Y-%m-%d')"
           draft: false
           prerelease: false
