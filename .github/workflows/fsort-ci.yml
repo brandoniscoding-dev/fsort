@@ -75,19 +75,22 @@ jobs:
 
       - name: Prepare Debian package structure
         run: |
+          # Create directories for Debian package structure
           mkdir -p "fsort_${VERSION}/DEBIAN"
           mkdir -p "fsort_${VERSION}/usr/local/bin"
 
+          # Correcting 'Maintainer' and adding other necessary info to the control file
           cat <<EOF > "fsort_${VERSION}/DEBIAN/control"
           Package: fsort
           Version: ${VERSION}
           Architecture: all
-          mastertainer: Brandon <brandon@example.com>
+          Maintainer: Brandon <brandon@example.com>
           Description: Automated File Organizer
           Section: utils
           Priority: optional
           EOF
 
+          # Post-installation script
           cat <<EOF > "fsort_${VERSION}/DEBIAN/postinst"
           #!/bin/bash
           chmod +x /usr/local/bin/fsort
@@ -96,22 +99,30 @@ jobs:
           EOF
           chmod 0755 "fsort_${VERSION}/DEBIAN/postinst"
 
+          # Pre-removal script
           cat <<EOF > "fsort_${VERSION}/DEBIAN/prerm"
           #!/bin/bash
-          rm -f /usr/local/bin/fsort
-          rm -f /usr/local/bin/fsort-uninstall
-          echo 'fsort has been removed.'
+          echo '[INFO] Running uninstall...'
+          fsort-uninstall || { echo "[ERROR] Uninstall failed"; exit 1; }
+          echo '[SUCCESS] fsort removed successfully.'
           EOF
           chmod 0755 "fsort_${VERSION}/DEBIAN/prerm"
 
+          # Copy necessary files to the package directory
           cp src/main.sh "fsort_${VERSION}/usr/local/bin/fsort"
-          
+          cp install.sh "fsort_${VERSION}/usr/local/bin/fsort-install"  # Assuming you want install script available
 
       - name: Build Debian package
         run: dpkg-deb --build "fsort_${VERSION}"
 
       - name: Create tar.gz package
         run: tar -czvf "fsort-${VERSION}.tar.gz" src/ install.sh version
+
+      - name: Debug file listing
+        run: |
+          ls -lh
+          ls -lh fsort_${VERSION}.deb
+          ls -lh fsort-${VERSION}.tar.gz
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
