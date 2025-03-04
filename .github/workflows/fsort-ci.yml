@@ -130,7 +130,7 @@ jobs:
           chmod +x "fsort_${{ env.VERSION }}/usr/local/bin/fsort-uninstall"
 
           # Copier les scripts principaux
-          cp main.sh "fsort_${{ env.VERSION }}/usr/local/bin/fsort"
+          cp src/main.sh "fsort_${{ env.VERSION }}/usr/local/bin/fsort"
           cp install.sh "fsort_${{ env.VERSION }}/usr/share/fsort/install.sh"
 
           # Vérifier la présence du script fsort-uninstall
