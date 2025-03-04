@@ -1,0 +1,126 @@
+name: fsort CI/CD
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+
+  pull_request:
+    branches:
+      - master
+      - dev
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-test:
+    name: Install and Test fsort
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install tree (for verification)
+        run: sudo apt-get install -y tree
+
+      - name: Check essential files
+        run: |
+          tree -L 3
+          [ -f install.sh ] || { echo "::error::[ERROR] Missing install.sh"; exit 1; }
+          [ -f src/main.sh ] || { echo "::error::[ERROR] Missing src/main.sh"; exit 1; }
+          [ -f version ] || { echo "::error::[ERROR] Missing version file"; exit 1; }
+
+      - name: Install fsort
+        run: |
+          chmod +x install.sh
+          ./install.sh
+
+      - name: Verify installation
+        run: |
+          command -v fsort || { echo "::error::[ERROR] fsort not installed"; exit 1; }
+          fsort version || { echo "::error::[ERROR] fsort execution issue"; exit 1; }
+
+      - name: Install Python and pytest
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+
+      - name: Run tests
+        run: pytest tests/
+
+  release:
+    name: Create release (master branch only)
+    needs: build-and-test
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read version
+        id: get_version
+        run: |
+          VERSION=$(cat version | tr -d '\n')
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Read version: ${VERSION}"
+
+      - name: Prepare Debian package structure
+        run: |
+          mkdir -p "fsort_${VERSION}/DEBIAN"
+          mkdir -p "fsort_${VERSION}/usr/local/bin"
+
+          cat <<EOF > "fsort_${VERSION}/DEBIAN/control"
+          Package: fsort
+          Version: ${VERSION}
+          Architecture: all
+          mastertainer: Brandon <brandon@example.com>
+          Description: Automated File Organizer
+          Section: utils
+          Priority: optional
+          EOF
+
+          cat <<EOF > "fsort_${VERSION}/DEBIAN/postinst"
+          #!/bin/bash
+          chmod +x /usr/local/bin/fsort
+          chmod +x /usr/local/bin/fsort-uninstall
+          echo 'fsort installed successfully!'
+          EOF
+          chmod 0755 "fsort_${VERSION}/DEBIAN/postinst"
+
+          cat <<EOF > "fsort_${VERSION}/DEBIAN/prerm"
+          #!/bin/bash
+          rm -f /usr/local/bin/fsort
+          rm -f /usr/local/bin/fsort-uninstall
+          echo 'fsort has been removed.'
+          EOF
+          chmod 0755 "fsort_${VERSION}/DEBIAN/prerm"
+
+          cp src/main.sh "fsort_${VERSION}/usr/local/bin/fsort"
+          cp uninstall.sh "fsort_${VERSION}/usr/local/bin/fsort-uninstall"
+
+      - name: Build Debian package
+        run: dpkg-deb --build "fsort_${VERSION}"
+
+      - name: Create tar.gz package
+        run: tar -czvf "fsort-${VERSION}.tar.gz" src/ install.sh version
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            fsort-${VERSION}.tar.gz
+            fsort_${VERSION}.deb
+          tag_name: "v${VERSION}"
+          name: "fsort v${VERSION}"
+          body: "Version ${VERSION} of fsort - Automated File Organizer."
+          draft: false
+          prerelease: false
