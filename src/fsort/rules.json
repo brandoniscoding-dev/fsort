@@ -1,0 +1,15 @@
+{
+    "rules": [
+      {
+        "name": "Documents",
+        "target": "Documents",
+        "patterns": ["*.txt", "*.docx"]
+      },
+      {
+        "name": "Images",
+        "target": "Images",
+        "patterns": ["*.jpg", "*.png"]
+      }
+    ]
+  }
+  
